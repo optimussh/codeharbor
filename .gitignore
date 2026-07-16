@@ -1,0 +1,10 @@
+﻿node_modules/
+dist/
+build/
+.env
+data/workspaces/
+data/audit/
+data/session-map.json
+*.log
+.DS_Store
+Thumbs.db
