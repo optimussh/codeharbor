@@ -1,6 +1,13 @@
 import { Router } from "express";
 import { requireAuth } from "../auth/requireAuth.js";
-import { getOpencodeClient, checkOpencodeHealth } from "../opencode/client.js";
+import { checkOpencodeHealth } from "../opencode/client.js";
+import {
+  opencodeFetch,
+  opencodeUrl,
+  parseJsonBody,
+  sessionIdOf,
+  directoryOf,
+} from "../opencode/http.js";
 import * as sessionMap from "../sessionMap.js";
 import { appendAudit } from "../audit.js";
 import { config } from "../config.js";
@@ -17,27 +24,49 @@ async function requireOpencodeUp() {
   }
 }
 
-function sessionIdOf(s: unknown): string | undefined {
-  if (!s || typeof s !== "object") return undefined;
-  const o = s as Record<string, unknown>;
-  if (typeof o.id === "string") return o.id;
-  if (typeof o.sessionID === "string") return o.sessionID;
-  return undefined;
+function workspaceOf(username: string): string {
+  return ensureWorkspace(config.workspacesRoot, username);
+}
+
+function requireSessionOwner(
+  id: string,
+  username: string,
+): sessionMap.SessionRecord {
+  if (!sessionMap.assertOwner(id, username)) {
+    const err = new Error("Forbidden") as Error & { status: number };
+    err.status = 403;
+    throw err;
+  }
+  return sessionMap.recordOf(id)!;
 }
 
 sessionsRouter.get("/sessions", requireAuth, async (req, res) => {
   try {
     await requireOpencodeUp();
     const username = req.session.user!.username;
-    const client = getOpencodeClient();
-    const listed = await client.session.list();
-    const all = (listed as { data?: unknown }).data ?? listed;
-    const arr = Array.isArray(all) ? all : [];
+    const workspace = workspaceOf(username);
+
+    // List sessions scoped to this user's workspace directory
+    const listed = await opencodeFetch("/session", {
+      directory: workspace,
+      method: "GET",
+    });
+    const body = await parseJsonBody(listed);
+    const arr = Array.isArray(body) ? body : [];
+
     const owned = arr.filter((s) => {
       const id = sessionIdOf(s);
-      return id && sessionMap.assertOwner(id, username);
+      if (!id) return false;
+      // Prefer ownership map; also accept sessions in our directory not yet mapped
+      if (sessionMap.assertOwner(id, username)) return true;
+      const dir = directoryOf(s);
+      if (dir && pathEquals(dir, workspace)) {
+        sessionMap.claim(id, username, workspace);
+        return true;
+      }
+      return false;
     });
-    // Also include map-only ids not returned yet
+
     res.json(owned);
   } catch (e) {
     const err = e as Error & { status?: number };
@@ -49,37 +78,49 @@ sessionsRouter.post("/sessions", requireAuth, async (req, res) => {
   try {
     await requireOpencodeUp();
     const username = req.session.user!.username;
-    const workspace = ensureWorkspace(config.workspacesRoot, username);
-    const client = getOpencodeClient();
+    const workspace = workspaceOf(username);
     const title =
       typeof req.body?.title === "string" && req.body.title.trim()
         ? req.body.title.trim()
         : `session-${username}-${Date.now()}`;
 
-    const created = await client.session.create({
-      body: { title },
+    const created = await opencodeFetch("/session", {
+      method: "POST",
+      directory: workspace,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
     });
-    const data = (created as { data?: unknown }).data ?? created;
-    const id = sessionIdOf(data);
-    if (!id) {
-      res.status(502).json({ error: "OpenCode create returned no session id", raw: data });
+
+    if (!created.ok) {
+      const detail = await created.text();
+      res.status(502).json({
+        error: "OpenCode session create failed",
+        detail,
+        directory: workspace,
+      });
       return;
     }
-    sessionMap.claim(id, username);
-    appendAudit("session.create", username, { sessionId: id, workspace });
 
-    // Best-effort: some OpenCode versions accept directory in update / path APIs
-    try {
-      await fetch(`${config.opencodeBaseUrl}/session/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, directory: workspace }),
-      });
-    } catch {
-      // ignore
+    const data = await parseJsonBody(created);
+    const id = sessionIdOf(data);
+    if (!id) {
+      res
+        .status(502)
+        .json({ error: "OpenCode create returned no session id", raw: data });
+      return;
     }
 
-    res.status(201).json(data);
+    sessionMap.claim(id, username, workspace);
+    appendAudit("session.create", username, {
+      sessionId: id,
+      workspace,
+      directory: directoryOf(data) ?? workspace,
+    });
+
+    res.status(201).json({
+      ...(typeof data === "object" && data ? data : { id }),
+      workspace,
+    });
   } catch (e) {
     const err = e as Error & { status?: number };
     res.status(err.status ?? 502).json({ error: err.message });
@@ -91,13 +132,17 @@ sessionsRouter.get("/sessions/:id", requireAuth, async (req, res) => {
     await requireOpencodeUp();
     const username = req.session.user!.username;
     const id = req.params.id;
-    if (!sessionMap.assertOwner(id, username)) {
-      res.status(403).json({ error: "Forbidden" });
+    const rec = requireSessionOwner(id, username);
+
+    const result = await opencodeFetch(`/session/${id}`, {
+      method: "GET",
+      directory: rec.workspace,
+    });
+    if (!result.ok) {
+      res.status(result.status).json({ error: await result.text() });
       return;
     }
-    const client = getOpencodeClient();
-    const result = await client.session.get({ path: { id } });
-    res.json((result as { data?: unknown }).data ?? result);
+    res.json(await parseJsonBody(result));
   } catch (e) {
     const err = e as Error & { status?: number };
     res.status(err.status ?? 502).json({ error: err.message });
@@ -109,14 +154,18 @@ sessionsRouter.delete("/sessions/:id", requireAuth, async (req, res) => {
     await requireOpencodeUp();
     const username = req.session.user!.username;
     const id = req.params.id;
-    if (!sessionMap.assertOwner(id, username)) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
-    const client = getOpencodeClient();
-    await client.session.delete({ path: { id } });
+    const rec = requireSessionOwner(id, username);
+
+    const result = await opencodeFetch(`/session/${id}`, {
+      method: "DELETE",
+      directory: rec.workspace,
+    });
     sessionMap.release(id);
     appendAudit("session.delete", username, { sessionId: id });
+    if (!result.ok && result.status !== 404) {
+      res.status(502).json({ error: await result.text() });
+      return;
+    }
     res.json({ ok: true });
   } catch (e) {
     const err = e as Error & { status?: number };
@@ -129,13 +178,17 @@ sessionsRouter.get("/sessions/:id/messages", requireAuth, async (req, res) => {
     await requireOpencodeUp();
     const username = req.session.user!.username;
     const id = req.params.id;
-    if (!sessionMap.assertOwner(id, username)) {
-      res.status(403).json({ error: "Forbidden" });
+    const rec = requireSessionOwner(id, username);
+
+    const result = await opencodeFetch(`/session/${id}/message`, {
+      method: "GET",
+      directory: rec.workspace,
+    });
+    if (!result.ok) {
+      res.status(result.status).json({ error: await result.text() });
       return;
     }
-    const client = getOpencodeClient();
-    const result = await client.session.messages({ path: { id } });
-    res.json((result as { data?: unknown }).data ?? result);
+    res.json(await parseJsonBody(result));
   } catch (e) {
     const err = e as Error & { status?: number };
     res.status(err.status ?? 502).json({ error: err.message });
@@ -147,10 +200,8 @@ sessionsRouter.post("/sessions/:id/messages", requireAuth, async (req, res) => {
     await requireOpencodeUp();
     const username = req.session.user!.username;
     const id = req.params.id;
-    if (!sessionMap.assertOwner(id, username)) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
+    const rec = requireSessionOwner(id, username);
+
     const text = String(req.body?.text ?? "").trim();
     if (!text) {
       res.status(400).json({ error: "text is required" });
@@ -159,39 +210,54 @@ sessionsRouter.post("/sessions/:id/messages", requireAuth, async (req, res) => {
 
     appendAudit("message.send", username, { sessionId: id });
 
-    // Prefer async so SSE can stream; fall back to sync prompt
-    const asyncRes = await fetch(
-      `${config.opencodeBaseUrl}/session/${id}/prompt_async`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          parts: [{ type: "text", text }],
-          ...(config.geminiApiKey
-            ? {
-                model: {
-                  providerID: "google",
-                  modelID: "gemini-2.0-flash",
-                },
-              }
-            : {}),
-        }),
-      },
-    );
+    const model = config.geminiApiKey
+      ? {
+          providerID: config.opencodeProviderId,
+          modelID: config.opencodeModelId,
+        }
+      : undefined;
+
+    const promptBody = {
+      parts: [{ type: "text", text }],
+      ...(model ? { model } : {}),
+    };
+
+    const asyncRes = await opencodeFetch(`/session/${id}/prompt_async`, {
+      method: "POST",
+      directory: rec.workspace,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(promptBody),
+    });
 
     if (asyncRes.status === 204 || asyncRes.ok) {
-      res.status(202).json({ ok: true, mode: "async" });
+      res.status(202).json({
+        ok: true,
+        mode: "async",
+        workspace: rec.workspace,
+      });
       return;
     }
 
-    const client = getOpencodeClient();
-    const result = await client.session.prompt({
-      path: { id },
-      body: {
-        parts: [{ type: "text", text }],
-      },
+    // Fallback: sync prompt
+    const syncRes = await opencodeFetch(`/session/${id}/message`, {
+      method: "POST",
+      directory: rec.workspace,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(promptBody),
     });
-    res.json((result as { data?: unknown }).data ?? result);
+
+    if (!syncRes.ok) {
+      const detail = await asyncRes.text().catch(() => "");
+      const detail2 = await syncRes.text().catch(() => "");
+      res.status(502).json({
+        error: "OpenCode prompt failed",
+        async: detail,
+        sync: detail2,
+      });
+      return;
+    }
+
+    res.json(await parseJsonBody(syncRes));
   } catch (e) {
     const err = e as Error & { status?: number };
     res.status(err.status ?? 502).json({ error: err.message });
@@ -203,13 +269,16 @@ sessionsRouter.post("/sessions/:id/abort", requireAuth, async (req, res) => {
     await requireOpencodeUp();
     const username = req.session.user!.username;
     const id = req.params.id;
-    if (!sessionMap.assertOwner(id, username)) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
-    const client = getOpencodeClient();
-    await client.session.abort({ path: { id } });
-    res.json({ ok: true });
+    const rec = requireSessionOwner(id, username);
+
+    const result = await opencodeFetch(`/session/${id}/abort`, {
+      method: "POST",
+      directory: rec.workspace,
+    });
+    res.status(result.ok ? 200 : 502).json({
+      ok: result.ok,
+      detail: result.ok ? undefined : await result.text(),
+    });
   } catch (e) {
     const err = e as Error & { status?: number };
     res.status(err.status ?? 502).json({ error: err.message });
@@ -225,10 +294,8 @@ sessionsRouter.post(
       const username = req.session.user!.username;
       const id = req.params.id;
       const permissionId = req.params.permissionId;
-      if (!sessionMap.assertOwner(id, username)) {
-        res.status(403).json({ error: "Forbidden" });
-        return;
-      }
+      const rec = requireSessionOwner(id, username);
+
       const response = String(req.body?.response ?? "reject");
       const allowed = ["once", "always", "reject"];
       if (!allowed.includes(response)) {
@@ -236,10 +303,11 @@ sessionsRouter.post(
         return;
       }
 
-      const r = await fetch(
-        `${config.opencodeBaseUrl}/session/${id}/permissions/${permissionId}`,
+      const r = await opencodeFetch(
+        `/session/${id}/permissions/${permissionId}`,
         {
           method: "POST",
+          directory: rec.workspace,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ response }),
         },
@@ -253,7 +321,9 @@ sessionsRouter.post(
 
       if (!r.ok) {
         const body = await r.text();
-        res.status(502).json({ error: "permission respond failed", detail: body });
+        res
+          .status(502)
+          .json({ error: "permission respond failed", detail: body });
         return;
       }
       res.json({ ok: true });
@@ -263,3 +333,14 @@ sessionsRouter.post(
     }
   },
 );
+
+/** Debug helper — not used by UI */
+export function sessionCreateUrl(workspace: string): string {
+  return opencodeUrl("/session", workspace);
+}
+
+function pathEquals(a: string, b: string): boolean {
+  const norm = (p: string) =>
+    p.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+  return norm(a) === norm(b);
+}

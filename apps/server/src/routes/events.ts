@@ -3,11 +3,14 @@ import { requireAuth } from "../auth/requireAuth.js";
 import { config } from "../config.js";
 import * as sessionMap from "../sessionMap.js";
 import { checkOpencodeHealth } from "../opencode/client.js";
+import { ensureWorkspace } from "../workspace.js";
+import { opencodeUrl } from "../opencode/http.js";
 
 export const eventsRouter = Router();
 
 eventsRouter.get("/events", requireAuth, async (req, res) => {
   const username = req.session.user!.username;
+  const workspace = ensureWorkspace(config.workspacesRoot, username);
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -18,7 +21,7 @@ eventsRouter.get("/events", requireAuth, async (req, res) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
-  send({ type: "server.connected", properties: { username } });
+  send({ type: "server.connected", properties: { username, workspace } });
 
   if ((await checkOpencodeHealth()) !== "up") {
     send({
@@ -31,14 +34,29 @@ eventsRouter.get("/events", requireAuth, async (req, res) => {
 
   const pump = async () => {
     try {
-      const upstream = await fetch(`${config.opencodeBaseUrl}/event`, {
-        headers: { Accept: "text/event-stream" },
-        signal: controller.signal,
-      });
-      if (!upstream.ok || !upstream.body) {
+      const urls = [
+        opencodeUrl("/event", workspace),
+        `${config.opencodeBaseUrl}/event`,
+      ];
+      let upstream: Response | null = null;
+      for (const url of urls) {
+        try {
+          const r = await fetch(url, {
+            headers: { Accept: "text/event-stream" },
+            signal: controller.signal,
+          });
+          if (r.ok && r.body) {
+            upstream = r;
+            break;
+          }
+        } catch {
+          // try next
+        }
+      }
+      if (!upstream?.body) {
         send({
           type: "opencode.down",
-          properties: { status: upstream.status },
+          properties: { message: "SSE upstream failed" },
         });
         return;
       }
@@ -70,13 +88,11 @@ eventsRouter.get("/events", requireAuth, async (req, res) => {
               (props.sessionId as string | undefined) ??
               ((props.info as { sessionID?: string } | undefined)?.sessionID);
 
-            // Pass global / non-session events; filter session-scoped by ownership
             if (sid && !sessionMap.assertOwner(sid, username)) {
               continue;
             }
             send(evt);
           } catch {
-            // forward raw if not json
             send({ type: "raw", properties: { raw } });
           }
         }
@@ -93,7 +109,6 @@ eventsRouter.get("/events", requireAuth, async (req, res) => {
 
   void pump();
 
-  // heartbeat
   const hb = setInterval(() => {
     res.write(`: ping\n\n`);
   }, 15000);

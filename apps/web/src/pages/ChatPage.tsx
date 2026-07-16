@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { useChatStore } from "../stores/chatStore";
+import { api } from "../api/client";
 import { SessionList } from "../components/SessionList";
 import { MessageStream } from "../components/MessageStream";
 import { Composer } from "../components/Composer";
@@ -18,12 +19,17 @@ export function ChatPage() {
   const loadFiles = useChatStore((s) => s.loadFiles);
   const connectEvents = useChatStore((s) => s.connectEvents);
   const disconnectEvents = useChatStore((s) => s.disconnectEvents);
+  const [workspacePath, setWorkspacePath] = useState<string>("");
 
   useEffect(() => {
     void refreshHealth();
     void loadSessions();
     void loadFiles();
     connectEvents();
+    void api
+      .workspace()
+      .then((w) => setWorkspacePath(w.path))
+      .catch(() => setWorkspacePath(""));
     const t = setInterval(() => void refreshHealth(), 10000);
     return () => {
       clearInterval(t);
@@ -40,11 +46,21 @@ export function ChatPage() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-white">Vibecoding Builder</span>
-          <span className="text-xs text-zinc-500">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="shrink-0 font-semibold text-white">
+            Vibecoding Builder
+          </span>
+          <span className="shrink-0 text-xs text-zinc-500">
             {user?.username} ({user?.role})
           </span>
+          {workspacePath && (
+            <span
+              className="truncate text-[11px] text-zinc-600"
+              title={workspacePath}
+            >
+              ws: {workspacePath}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3 text-sm">
           {user?.role === "admin" && (

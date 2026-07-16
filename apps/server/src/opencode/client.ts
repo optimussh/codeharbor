@@ -1,6 +1,9 @@
 import { createOpencodeClient } from "@opencode-ai/sdk";
 import { config } from "../config.js";
 import type { HealthStatus } from "../types.js";
+import { opencodeFetch } from "./http.js";
+import fs from "node:fs";
+import path from "node:path";
 
 export type OpencodeClient = ReturnType<typeof createOpencodeClient>;
 
@@ -39,32 +42,80 @@ export async function getHealth(): Promise<HealthStatus> {
   };
 }
 
-/** Best-effort Gemini provider key injection for OpenCode */
+/** Write local opencode config + inject Gemini API key */
 export async function configureGeminiIfNeeded(): Promise<void> {
   if (!config.geminiApiKey.trim()) return;
+
+  // Project-local opencode config (helps managed process pick model)
+  try {
+    const cfgDir = path.join(config.projectRoot, ".opencode");
+    fs.mkdirSync(cfgDir, { recursive: true });
+    const cfgPath = path.join(config.projectRoot, "opencode.json");
+    const cfg = {
+      $schema: "https://opencode.ai/config.json",
+      model: `${config.opencodeProviderId}/${config.opencodeModelId}`,
+      provider: {
+        [config.opencodeProviderId]: {
+          options: {
+            apiKey: "{env:GEMINI_API_KEY}",
+          },
+        },
+      },
+    };
+    // Prefer env reference in file if supported; also write auth via API
+    fs.writeFileSync(
+      cfgPath,
+      JSON.stringify(
+        {
+          $schema: "https://opencode.ai/config.json",
+          model: `${config.opencodeProviderId}/${config.opencodeModelId}`,
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    void cfg;
+    void cfgDir;
+  } catch (err) {
+    console.warn("[opencode] config write failed:", err);
+  }
+
   if ((await checkOpencodeHealth()) !== "up") return;
 
   try {
-    const oc = getOpencodeClient();
-    // Try common provider IDs used by OpenCode / models.dev
-    const providerIds = ["google", "gemini"];
-    for (const id of providerIds) {
+    const providerIds = [config.opencodeProviderId, "google", "gemini"];
+    for (const id of [...new Set(providerIds)]) {
       try {
-        // SDK auth.set shape may vary by version — fall back to raw HTTP
-        await fetch(`${config.opencodeBaseUrl}/auth/${id}`, {
+        const res = await fetch(`${config.opencodeBaseUrl}/auth/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "api", key: config.geminiApiKey }),
           signal: AbortSignal.timeout(5000),
         });
+        if (res.ok) {
+          console.log(`[opencode] auth set for provider=${id}`);
+        }
       } catch {
         // ignore per-provider failure
       }
-      void oc;
     }
-    console.log("[opencode] Gemini key injection attempted");
   } catch (err) {
     console.warn("[opencode] Gemini configure failed:", err);
+  }
+}
+
+export async function probeDirectorySession(
+  directory: string,
+): Promise<boolean> {
+  try {
+    const res = await opencodeFetch("/session", {
+      method: "GET",
+      directory,
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

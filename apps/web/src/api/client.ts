@@ -112,4 +112,23 @@ export const api = {
       `/api/admin/audit?limit=${limit}`,
     );
   },
+  workspace() {
+    return request<{
+      username: string;
+      path: string;
+      sessionCount: number;
+    }>("/api/workspace");
+  },
+  adminWorkspaces() {
+    return request<{
+      workspaces: Array<{
+        username: string;
+        role: Role;
+        path: string;
+        fileCount: number;
+        bytes: number;
+        sessions: number;
+      }>;
+    }>("/api/admin/workspaces");
+  },
 };

@@ -20,6 +20,9 @@ export const config = {
   opencodeBaseUrl: process.env.OPENCODE_BASE_URL ?? "http://127.0.0.1:4096",
   opencodeBin: process.env.OPENCODE_BIN ?? "opencode",
   opencodeManaged: (process.env.OPENCODE_MANAGED ?? "true") === "true",
+  /** OpenCode / models.dev provider id for Gemini API */
+  opencodeProviderId: process.env.OPENCODE_PROVIDER_ID ?? "google",
+  opencodeModelId: process.env.OPENCODE_MODEL_ID ?? "gemini-2.0-flash",
   workspacesRoot: resolveWorkspacesRoot(),
   auditDir: path.resolve(projectRoot, "data/audit"),
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",

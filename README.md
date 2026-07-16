@@ -1,6 +1,8 @@
-# Vibecoding Builder — Phase 0 MVP
+# Vibecoding Builder — Phase 0 + Phase 1 (로컬)
 
-로컬 AI 코딩 에이전트 셸. 자연어 → OpenCode → 유저별 워크스페이스 산출물.
+로컬 AI 코딩 에이전트 셸. 자연어 → OpenCode → **유저별 워크스페이스** 산출물.
+
+**Phase 1 포함:** 세션 소유권 영속화, OpenCode `directory` 바인딩, 멀티유저 경로 격리, admin 워크스페이스 요약.
 
 브라우저 진입점: **http://localhost:5173**  
 (`http://127.0.0.1:4096` 은 OpenCode 백엔드 전용 — 직접 열 필요 없음)
@@ -49,7 +51,9 @@ npm run dev
 | user1    | user1     | user  |
 | user2    | user2     | user  |
 
-각 유저는 `data/workspaces/{username}/` 만 사용합니다.
+각 유저는 `data/workspaces/{username}/` 만 사용합니다.  
+OpenCode 세션은 해당 경로를 `directory` 쿼리로 고정해 생성합니다.  
+세션 소유권은 `data/session-map.json` 에 저장되어 서버 재시작 후에도 유지됩니다.
 
 ## 테스트
 
