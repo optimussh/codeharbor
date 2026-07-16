@@ -1,0 +1,17 @@
+{
+  "name": "vibecodingbuilder",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm run dev -w @vibe/server\" \"npm run dev -w @vibe/web\"",
+    "dev:server": "npm run dev -w @vibe/server",
+    "dev:web": "npm run dev -w @vibe/web",
+    "test": "npm run test -w @vibe/server",
+    "build": "npm run build -w @vibe/server && npm run build -w @vibe/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

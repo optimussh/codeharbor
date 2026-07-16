@@ -1,9 +1,11 @@
-﻿node_modules/
+node_modules/
 dist/
 build/
 .env
-data/workspaces/
-data/audit/
+data/workspaces/*
+!data/workspaces/.gitkeep
+data/audit/*
+!data/audit/.gitkeep
 data/session-map.json
 *.log
 .DS_Store
