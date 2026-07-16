@@ -26,6 +26,15 @@ export const config = {
   workspacesRoot: resolveWorkspacesRoot(),
   auditDir: path.resolve(projectRoot, "data/audit"),
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  databaseUrl:
+    process.env.DATABASE_URL ??
+    "postgres://vibe:vibe@127.0.0.1:5433/vibe",
+  ragEnabled: (process.env.RAG_ENABLED ?? "true") === "true",
+  ragTopK: Number(process.env.RAG_TOP_K ?? 5),
+  ragChunkSize: Number(process.env.RAG_CHUNK_SIZE ?? 1200),
+  ragChunkOverlap: Number(process.env.RAG_CHUNK_OVERLAP ?? 150),
+  embeddingModel: process.env.EMBEDDING_MODEL ?? "text-embedding-004",
+  embeddingDims: 768,
   passwords: {
     admin: process.env.ADMIN_PASSWORD ?? "admin123",
     user1: process.env.USER1_PASSWORD ?? "user1",

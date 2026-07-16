@@ -210,6 +210,30 @@ sessionsRouter.post("/sessions/:id/messages", requireAuth, async (req, res) => {
 
     appendAudit("message.send", username, { sessionId: id });
 
+    // Phase 3: inject RAG context (fail-open if RAG down)
+    let promptText = text;
+    let ragHits = 0;
+    const useRag = req.body?.rag !== false && config.ragEnabled;
+    if (useRag) {
+      try {
+        const { searchChunks, formatRagContext } = await import(
+          "../rag/store.js"
+        );
+        const hits = await searchChunks(username, text, config.ragTopK);
+        ragHits = hits.length;
+        const ctx = formatRagContext(hits);
+        if (ctx) {
+          promptText = `${ctx}사용자 질문:\n${text}`;
+          appendAudit("rag.inject", username, {
+            sessionId: id,
+            hitCount: ragHits,
+          });
+        }
+      } catch {
+        // RAG optional for chat
+      }
+    }
+
     const model = config.geminiApiKey
       ? {
           providerID: config.opencodeProviderId,
@@ -218,7 +242,7 @@ sessionsRouter.post("/sessions/:id/messages", requireAuth, async (req, res) => {
       : undefined;
 
     const promptBody = {
-      parts: [{ type: "text", text }],
+      parts: [{ type: "text", text: promptText }],
       ...(model ? { model } : {}),
     };
 
@@ -234,6 +258,7 @@ sessionsRouter.post("/sessions/:id/messages", requireAuth, async (req, res) => {
         ok: true,
         mode: "async",
         workspace: rec.workspace,
+        ragHits,
       });
       return;
     }

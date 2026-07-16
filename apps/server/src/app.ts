@@ -9,6 +9,7 @@ import { fsRouter } from "./routes/fs.js";
 import { eventsRouter } from "./routes/events.js";
 import { adminRouter } from "./routes/admin.js";
 import { workspaceRouter } from "./routes/workspace.js";
+import { ragRouter } from "./routes/rag.js";
 import * as sessionMap from "./sessionMap.js";
 import { ensureWorkspace } from "./workspace.js";
 import { config } from "./config.js";
@@ -49,6 +50,7 @@ export function createApp(_options: CreateAppOptions = {}) {
   app.use("/api", eventsRouter);
   app.use("/api", adminRouter);
   app.use("/api", workspaceRouter);
+  app.use("/api", ragRouter);
 
   return app;
 }

@@ -13,6 +13,7 @@ export interface HealthStatus {
   server: "ok";
   opencode: "up" | "down";
   llm: "configured" | "missing";
+  rag: "up" | "down" | "disabled";
 }
 
 export interface FileNode {

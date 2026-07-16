@@ -2,7 +2,8 @@
 
 로컬 AI 코딩 에이전트 셸. 자연어 → OpenCode → **유저별 워크스페이스** 산출물.
 
-**Phase 1 포함:** 세션 소유권 영속화, OpenCode `directory` 바인딩, 멀티유저 경로 격리, admin 워크스페이스 요약.
+**Phase 1 포함:** 세션 소유권 영속화, OpenCode `directory` 바인딩, 멀티유저 경로 격리, admin 워크스페이스 요약.  
+**Phase 3 RAG 미니:** Postgres+pgvector, 문서 업로드/검색, 채팅 시 근거 자동 주입 (유저별 격리).
 
 브라우저 진입점: **http://localhost:5173**  
 (`http://127.0.0.1:4096` 은 OpenCode 백엔드 전용 — 직접 열 필요 없음)
@@ -36,12 +37,22 @@ SESSION_SECRET=any-long-random-string
 
 ```bash
 npm install
+npm run db:up          # Postgres+pgvector (Docker, port 5433)
+# .env 에 GEMINI_API_KEY 입력 (임베딩: 키 없으면 local hash 폴백)
 npm run dev
 ```
 
 - Web: http://localhost:5173  
 - BFF: http://127.0.0.1:3000  
-- OpenCode: http://127.0.0.1:4096 (서버가 `OPENCODE_MANAGED=true` 이면 자동 기동 시도)
+- OpenCode: http://127.0.0.1:4096 (서버가 `OPENCODE_MANAGED=true` 이면 자동 기동 시도)  
+- Postgres RAG: `127.0.0.1:5433` (`vibe` / `vibe` / db `vibe`)
+
+### RAG 사용
+
+1. Status bar 에 `RAG: up` 확인 (`npm run db:up`)
+2. 우측 **RAG Docs** 에서 `.txt` / `.md` 업로드
+3. 검색으로 확인하거나, 채팅 전송 시 관련 청크가 프롬프트에 자동 주입
+4. 유저별 격리: `user1` 문서는 `user2` 검색에 안 나옴
 
 ## 계정
 

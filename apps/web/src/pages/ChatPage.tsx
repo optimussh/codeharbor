@@ -7,6 +7,7 @@ import { SessionList } from "../components/SessionList";
 import { MessageStream } from "../components/MessageStream";
 import { Composer } from "../components/Composer";
 import { FileTree } from "../components/FileTree";
+import { RagPanel } from "../components/RagPanel";
 import { StatusBar } from "../components/StatusBar";
 import { PermissionCard } from "../components/PermissionCard";
 
@@ -78,7 +79,7 @@ export function ChatPage() {
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[220px_1fr_260px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[200px_1fr_220px_240px]">
         <SessionList />
         <div className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1">
@@ -87,6 +88,7 @@ export function ChatPage() {
           <Composer />
         </div>
         <FileTree />
+        <RagPanel />
       </div>
 
       <StatusBar health={health} />

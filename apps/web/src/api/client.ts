@@ -9,6 +9,25 @@ export interface HealthStatus {
   server: "ok";
   opencode: "up" | "down";
   llm: "configured" | "missing";
+  rag?: "up" | "down" | "disabled";
+}
+
+export interface RagDocument {
+  id: string;
+  filename: string;
+  mime?: string | null;
+  byte_size: number;
+  chunk_count?: number;
+  created_at?: string;
+}
+
+export interface RagHit {
+  chunkId: string;
+  documentId: string;
+  filename: string;
+  content: string;
+  score: number;
+  chunkIndex: number;
 }
 
 export interface FileNode {
@@ -130,5 +149,45 @@ export const api = {
         sessions: number;
       }>;
     }>("/api/admin/workspaces");
+  },
+  ragStatus() {
+    return request<{
+      rag: "up" | "down" | "disabled";
+      embedding: { mode: string; model: string };
+    }>("/api/rag/status");
+  },
+  ragDocuments() {
+    return request<{ documents: RagDocument[] }>("/api/rag/documents");
+  },
+  async ragUpload(file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/rag/documents", {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        (data as { error?: string }).error ?? `HTTP ${res.status}`,
+      );
+    }
+    return data as {
+      documentId: string;
+      chunks: number;
+      embedProvider: string;
+    };
+  },
+  ragDelete(id: string) {
+    return request<{ ok: boolean }>(`/api/rag/documents/${id}`, {
+      method: "DELETE",
+    });
+  },
+  ragSearch(query: string, topK = 5) {
+    return request<{ hits: RagHit[] }>("/api/rag/search", {
+      method: "POST",
+      body: JSON.stringify({ query, topK }),
+    });
   },
 };

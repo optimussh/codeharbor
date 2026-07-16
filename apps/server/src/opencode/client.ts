@@ -35,10 +35,12 @@ export function llmStatus(): "configured" | "missing" {
 }
 
 export async function getHealth(): Promise<HealthStatus> {
+  const { checkRagDb } = await import("../rag/db.js");
   return {
     server: "ok",
     opencode: await checkOpencodeHealth(),
     llm: llmStatus(),
+    rag: await checkRagDb(),
   };
 }
 
