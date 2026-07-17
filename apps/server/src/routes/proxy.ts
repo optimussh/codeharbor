@@ -1,10 +1,19 @@
-import { Router, type Request, type Response, type NextFunction } from "express";
-import { createProxyMiddleware } from "http-proxy-middleware";
+import {
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
+import {
+  createProxyMiddleware,
+  responseInterceptor,
+} from "http-proxy-middleware";
 import { requireAuth } from "../auth/requireAuth.js";
 import { config } from "../config.js";
 import { ensureWorkspace } from "../workspace.js";
 import * as sessionMap from "../sessionMap.js";
 import { appendAudit } from "../audit.js";
+import { bootstrapUserWorkspace } from "../workspaceBootstrap.js";
 
 export const proxyRouter = Router();
 
@@ -18,7 +27,6 @@ function requireAuthOrLogin(req: Request, res: Response, next: NextFunction) {
     next();
     return;
   }
-  // API clients get JSON; browsers get login redirect
   const accept = String(req.headers.accept ?? "");
   if (accept.includes("text/html")) {
     const nextPath = req.originalUrl || "/chamber";
@@ -29,11 +37,7 @@ function requireAuthOrLogin(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
- * Tenant hard-gate for OpenCode HTTP API:
- * - require login
- * - inject directory=user workspace
- * - block access to sessions not owned by user
- * - claim newly created sessions for the user
+ * Tenant hard-gate for OpenCode HTTP API
  */
 proxyRouter.use("/opencode", requireAuth, (req, res, next) => {
   const username = req.session.user!.username;
@@ -58,8 +62,10 @@ proxyRouter.use("/opencode", requireAuth, (req, res, next) => {
     req.url = url.pathname + url.search;
   }
 
-  // Capture session create responses to claim ownership
-  if (req.method === "POST" && (req.path === "/session" || req.path === "/session/")) {
+  if (
+    req.method === "POST" &&
+    (req.path === "/session" || req.path === "/session/")
+  ) {
     const originalJson = res.json.bind(res);
     res.json = ((body: unknown) => {
       try {
@@ -75,7 +81,7 @@ proxyRouter.use("/opencode", requireAuth, (req, res, next) => {
           appendAudit("proxy.session.claim", username, { sessionId: id });
         }
       } catch {
-        // ignore claim errors
+        // ignore
       }
       return originalJson(body);
     }) as typeof res.json;
@@ -89,7 +95,6 @@ const opencodeProxy = createProxyMiddleware({
   changeOrigin: true,
   pathRewrite: { "^/opencode": "" },
   ws: true,
-  selfHandleResponse: false,
   on: {
     proxyReq: (proxyReq, req) => {
       const username = (req as Request).session?.user?.username;
@@ -104,12 +109,9 @@ const opencodeProxy = createProxyMiddleware({
       }
     },
     proxyRes: (proxyRes, req) => {
-      // Claim session on create when response is JSON body streamed — best-effort via header not available
-      // Main claim is in res.json hook above; for raw proxy, parse on end if POST /session
       if (
         req.method === "POST" &&
-        (req.url?.startsWith("/session") ||
-          (req as Request).path === "/session" ||
+        ((req as Request).path === "/session" ||
           (req as Request).originalUrl?.includes("/opencode/session"))
       ) {
         const chunks: Buffer[] = [];
@@ -149,83 +151,121 @@ const opencodeProxy = createProxyMiddleware({
 
 proxyRouter.use("/opencode", opencodeProxy);
 
-/**
- * OpenChamber SPA uses absolute asset paths (/assets/...).
- * Path-prefix reverse proxy (/chamber → :3001) breaks JS/CSS load → blank UI.
- * Local fix: after auth, **redirect** to direct OpenChamber origin (default :3001).
- */
-export function mountOpenChamberProxy(app: import("express").Express): void {
-  const handler = (req: Request, res: Response) => {
-    if (!config.openchamberEnabled || !config.openchamberUrl) {
-      res.status(503).type("html").send(chamberNotReadyHtml());
-      return;
-    }
-    appendAudit("chamber.redirect", req.session.user?.username);
-    const target = config.openchamberUrl.replace(/\/$/, "");
-    // Prefer HTML bridge so user understands two UIs (legacy chat vs chamber)
-    const accept = String(req.headers.accept ?? "");
-    if (accept.includes("text/html") || req.method === "GET") {
-      res.type("html").send(chamberLaunchHtml(target));
-      return;
-    }
-    res.redirect(302, target);
-  };
-
-  app.get("/chamber", requireAuthOrLogin, handler);
-  app.get("/chamber/*path", requireAuthOrLogin, handler);
+function rewriteChamberHtml(html: string, chamberOrigin: string): string {
+  const inject = `<base href="/chamber/"/>
+<script>window.__OPENCHAMBER_API_BASE_URL__=${JSON.stringify(chamberOrigin)};window.__VIBE_PLATFORM__=${JSON.stringify({ gateway: `http://127.0.0.1:${config.port}` })};</script>`;
+  let out = html;
+  if (out.includes("<head>")) {
+    out = out.replace("<head>", `<head>\n    ${inject}\n`);
+  } else if (out.includes("<head ")) {
+    out = out.replace(/<head([^>]*)>/, `<head$1>\n    ${inject}\n`);
+  }
+  // Absolute root assets → subpath (keeps double-prefix safe)
+  out = out
+    .replace(/(href|src)=["']\/(?!chamber\/)/g, `$1="/chamber/`)
+    .replace(/url\(\s*\/(?!chamber\/)/g, "url(/chamber/");
+  return out;
 }
 
-function chamberLaunchHtml(target: string): string {
-  return `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"/>
-<title>OpenChamber · workspace bind</title>
-<style>
-body{font-family:system-ui;background:#0c0d10;color:#e8eaed;padding:2rem;max-width:40rem;margin:auto;line-height:1.5}
-a{color:#7c9cff} .card{border:1px solid #2a2e38;background:#15171c;border-radius:12px;padding:1rem;margin:1rem 0}
-code,pre{background:#0a0b0e;padding:.15rem .4rem;border-radius:4px;font-size:.85rem}
-pre{padding:.75rem;overflow:auto;white-space:pre-wrap}
-.muted{color:#9aa0a6;font-size:.9rem}
-button{background:#4f6ef7;color:#fff;border:0;padding:.55rem 1rem;border-radius:8px;cursor:pointer;font-weight:600}
-</style></head>
-<body>
-  <h1>워크스페이스 연결 중…</h1>
-  <p class="muted">유저 전용 폴더를 준비한 뒤 OpenChamber(:3001)로 이동합니다.
-  (경로 프록시는 SPA 자산을 깨뜨리므로 직접 포트를 엽니다.)</p>
-  <div class="card" id="status">bind 호출 중…</div>
-  <div class="card">
-    <p><a id="open" href="${target}"><strong>OpenChamber 열기 →</strong></a></p>
-    <p class="muted">Chamber에서 프로젝트로 이 폴더를 여세요 (아래 경로).</p>
-    <pre id="ws">…</pre>
-    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('ws').textContent)">경로 복사</button>
-  </div>
-  <div class="card">
-    <p><strong>빠른 채팅 (레거시)</strong></p>
-    <p><a href="http://127.0.0.1:5173/">http://127.0.0.1:5173/</a></p>
-  </div>
-  <p><a href="/">← 포털</a></p>
-  <script>
-    (async () => {
-      const target = ${JSON.stringify(target)};
-      try {
-        const r = await fetch('/api/workspace/bind', {
-          method: 'POST', credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }, body: '{}'
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'bind failed');
-        document.getElementById('status').textContent =
-          '연결됨 · session=' + (data.sessionId || 'none') + ' · OpenCode directory 고정';
-        document.getElementById('ws').textContent = data.workspace || '';
-        // Open Chamber after short delay so user can read path
-        setTimeout(() => { location.href = target; }, 600);
-      } catch (e) {
-        document.getElementById('status').textContent = 'bind 실패: ' + e.message + ' — Chamber는 직접 엽니다.';
-        document.getElementById('ws').textContent = '(워크스페이스 경로를 포털에서 확인)';
-        setTimeout(() => { location.href = target; }, 1200);
+/**
+ * Subpath hosting: /chamber/* → OpenChamber :3001/*
+ * - HTML rewritten with <base href="/chamber/"> + API base to :3001
+ * - Static under /chamber/* proxied
+ * - Root /assets|/favicon* also proxied to chamber (SPA absolute paths)
+ */
+export function mountOpenChamberProxy(app: import("express").Express): void {
+  if (!config.openchamberEnabled || !config.openchamberUrl) {
+    app.get("/chamber", requireAuthOrLogin, (_req, res) => {
+      res.status(503).type("html").send(chamberNotReadyHtml());
+    });
+    app.get("/chamber/*path", requireAuthOrLogin, (_req, res) => {
+      res.status(503).type("html").send(chamberNotReadyHtml());
+    });
+    return;
+  }
+
+  const target = config.openchamberUrl.replace(/\/$/, "");
+
+  // Absolute assets requested at platform origin (when base rewrite incomplete)
+  const assetProxy = createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    ws: false,
+    on: {
+      error: (err, _req, res) => {
+        const r = res as Response;
+        if (!r.headersSent) r.status(502).end(String(err.message));
+      },
+    },
+  });
+
+  app.use(
+    ["/assets", "/favicon.svg", "/favicon-32.png", "/favicon-16.png", "/favicon.png", "/apple-touch-icon.png", "/apple-touch-icon-180x180.png", "/apple-touch-icon-167x167.png", "/apple-touch-icon-152x152.png", "/apple-touch-icon-120x120.png", "/manifest.webmanifest", "/sw.js"],
+    (req, res, next) => {
+      // only for browser asset GETs
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        next();
+        return;
       }
-    })();
-  </script>
-</body></html>`;
+      assetProxy(req, res, next);
+    },
+  );
+
+  const chamberProxy = createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    ws: true,
+    selfHandleResponse: true,
+    pathRewrite: { "^/chamber": "" },
+    on: {
+      proxyRes: responseInterceptor(async (responseBuffer, proxyRes, req) => {
+        const ctype = String(proxyRes.headers["content-type"] || "");
+        if (ctype.includes("text/html")) {
+          const html = responseBuffer.toString("utf8");
+          const rewritten = rewriteChamberHtml(html, target);
+          return rewritten;
+        }
+        return responseBuffer;
+      }),
+      proxyReq: (proxyReq, req) => {
+        const username = (req as Request).session?.user?.username;
+        if (username) {
+          bootstrapUserWorkspace(username);
+        }
+      },
+      error: (err, _req, res) => {
+        const r = res as Response;
+        if (!r.headersSent) {
+          r.status(502)
+            .type("html")
+            .send(
+              `<h1>OpenChamber proxy error</h1><pre>${err.message}</pre>
+               <p>Is chamber running on ${target}? <code>npm run chamber</code></p>
+               <p><a href="/">Portal</a> · <a href="http://127.0.0.1:5173/">Chat</a></p>`,
+            );
+        }
+      },
+    },
+  });
+
+  app.use(
+    "/chamber",
+    requireAuthOrLogin,
+    (req: Request, _res: Response, next: NextFunction) => {
+      appendAudit("chamber.access", req.session.user?.username, {
+        path: req.path,
+      });
+      if (req.session.user) {
+        bootstrapUserWorkspace(req.session.user.username);
+      }
+      // empty path → index
+      if (req.url === "" || req.url === "/") {
+        req.url = "/";
+      }
+      next();
+    },
+    chamberProxy,
+  );
 }
 
 function chamberNotReadyHtml(): string {
@@ -235,8 +275,8 @@ function chamberNotReadyHtml(): string {
 code{background:#15171c;padding:.15rem .4rem;border-radius:4px}a{color:#7c9cff}</style></head>
 <body>
 <h1>OpenChamber 아직 연결되지 않음</h1>
-<p>채팅(레거시): <a href="http://127.0.0.1:5173/">http://127.0.0.1:5173/</a></p>
-<p>Chamber 기동: <code>npm run chamber</code> (OpenCode :4096 필요)</p>
+<p>채팅: <a href="http://127.0.0.1:5173/">http://127.0.0.1:5173/</a></p>
+<p>Chamber: <code>npm run chamber</code> 후 <a href="/chamber/">/chamber/</a></p>
 <p><a href="/">← 포털</a></p>
 </body></html>`;
 }

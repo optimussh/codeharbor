@@ -70,6 +70,12 @@
 - **Why:** 로컬 프로덕션 UX·보안·관측성 강화
 - **Status:** done
 
+#### 검색·이름편집·Diff·Chamber 서브패스
+
+- **What:** 메시지 검색, 세션 이름 편집(PATCH), Diff 뷰어 UI (git/session), `/chamber/` 정식 서브패스 프록시(HTML base·API base inject, `/assets` 프록시)
+- **Why:** 사용자 요청 3종 고도화
+- **Status:** done
+
 ### 이전 완료 (MVP)
 
 | 커밋 | 내용 |

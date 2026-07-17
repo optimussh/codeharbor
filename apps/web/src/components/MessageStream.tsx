@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useMemo } from "react";
 import { useChatStore } from "../stores/chatStore";
 
 function parseMessage(m: unknown): { role: string; text: string } {
@@ -14,7 +15,9 @@ function parseMessage(m: unknown): { role: string; text: string } {
       .map((p) =>
         p && typeof p === "object" && "text" in p
           ? String((p as { text: unknown }).text)
-          : p && typeof p === "object" && (p as { type?: string }).type === "tool"
+          : p &&
+              typeof p === "object" &&
+              (p as { type?: string }).type === "tool"
             ? `\`${String((p as { tool?: string }).tool ?? "tool")}\``
             : "",
       )
@@ -43,17 +46,45 @@ export function MessageStream() {
   const messages = useChatStore((s) => s.messages);
   const streamLog = useChatStore((s) => s.streamLog);
   const error = useChatStore((s) => s.error);
+  const messageSearch = useChatStore((s) => s.messageSearch);
+  const setMessageSearch = useChatStore((s) => s.setMessageSearch);
+
+  const filtered = useMemo(() => {
+    const q = messageSearch.trim().toLowerCase();
+    if (!q) {
+      return messages.map((m, i) => ({ m, i, ...parseMessage(m) }));
+    }
+    return messages
+      .map((m, i) => ({ m, i, ...parseMessage(m) }))
+      .filter(
+        (row) =>
+          row.text.toLowerCase().includes(q) ||
+          row.role.toLowerCase().includes(q),
+      );
+  }, [messages, messageSearch]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      <div className="border-b border-zinc-800 px-3 py-2">
+        <input
+          value={messageSearch}
+          onChange={(e) => setMessageSearch(e.target.value)}
+          placeholder="메시지 검색…"
+          className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 outline-none focus:border-indigo-500"
+        />
+        {messageSearch.trim() && (
+          <p className="mt-1 text-[10px] text-zinc-500">
+            {filtered.length} / {messages.length} matches
+          </p>
+        )}
+      </div>
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {error && (
           <div className="rounded border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-300">
             {error}
           </div>
         )}
-        {messages.map((m, i) => {
-          const { role, text } = parseMessage(m);
+        {filtered.map(({ i, role, text }) => {
           const isUser = role === "user";
           return (
             <div
@@ -77,13 +108,13 @@ export function MessageStream() {
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-400">
             <p className="font-medium text-zinc-200">채팅 준비됨</p>
             <p className="mt-2">
-              왼쪽 <strong className="text-indigo-300">+ New</strong> 로 세션을 만들거나,
-              자동 생성된 세션에 메시지를 보내세요.
-            </p>
-            <p className="mt-2 text-xs text-zinc-600">
-              예: <code className="text-zinc-400">hello.txt 만들어줘</code>
+              왼쪽 <strong className="text-indigo-300">+ New</strong> 로 세션을
+              만들거나, 자동 생성된 세션에 메시지를 보내세요.
             </p>
           </div>
+        )}
+        {messages.length > 0 && filtered.length === 0 && (
+          <p className="text-sm text-zinc-500">검색 결과 없음</p>
         )}
       </div>
       <div className="max-h-28 overflow-y-auto border-t border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-[10px] text-zinc-500">

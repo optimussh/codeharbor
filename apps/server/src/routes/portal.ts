@@ -44,8 +44,8 @@ portalRouter.get("/", (req, res) => {
 
     <a class="card" href="http://127.0.0.1:5173/"><strong>1. 채팅 UI</strong><br/>
       <span class="muted">세션 · 메시지 · RAG · 파일 트리 — 가장 확실한 채팅</span></a>
-    <a class="card" href="/chamber"><strong>2. OpenChamber IDE</strong><br/>
-      <span class="muted">워크스페이스 bind 후 :3001 이동 · 프로젝트 경로 안내</span></a>
+    <a class="card" href="/chamber/"><strong>2. OpenChamber IDE (서브패스)</strong><br/>
+      <span class="muted">http://127.0.0.1:3000/chamber/ · SPA 자산 프록시 · API는 :3001</span></a>
     <button class="card" type="button" id="btnPreview"><strong>3. 앱 미리보기 시작</strong><br/>
       <span class="muted">워크스페이스에서 dev 서버 스폰 → /preview/app/</span></button>
     <div id="preview">preview: idle</div>

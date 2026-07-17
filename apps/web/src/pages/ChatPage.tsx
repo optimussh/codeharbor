@@ -11,6 +11,7 @@ import { RagPanel } from "../components/RagPanel";
 import { GitPanel } from "../components/GitPanel";
 import { StatusBar } from "../components/StatusBar";
 import { PermissionCard } from "../components/PermissionCard";
+import { DiffViewer } from "../components/DiffViewer";
 import { ResizeHandle } from "../components/ResizeHandle";
 import { usePanelWidths } from "../hooks/usePanelWidths";
 
@@ -90,21 +91,15 @@ export function ChatPage() {
           )}
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() =>
-              void api.workspaceBind().then((b) => {
-                window.open(b.chamberUrl, "_blank");
-                if (b.workspace) {
-                  void navigator.clipboard?.writeText(b.workspace);
-                }
-              })
-            }
+          <a
+            href="http://127.0.0.1:3000/chamber/"
+            target="_blank"
+            rel="noreferrer"
             className="text-xs text-indigo-400 hover:text-indigo-300"
-            title="워크스페이스 bind 후 OpenChamber 열기"
+            title="게이트웨이 서브패스 /chamber/ (로그인 필요)"
           >
             Chamber
-          </button>
+          </a>
           <button
             type="button"
             onClick={() =>
@@ -195,6 +190,7 @@ export function ChatPage() {
 
       <StatusBar health={health} />
       <PermissionCard />
+      <DiffViewer />
     </div>
   );
 }

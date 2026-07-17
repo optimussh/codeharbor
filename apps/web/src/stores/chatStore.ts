@@ -40,6 +40,7 @@ interface ChatState {
   createSession: () => Promise<void>;
   selectSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
+  renameSession: (id: string, title: string) => Promise<void>;
   sendMessage: (text: string) => Promise<void>;
   connectEvents: () => void;
   disconnectEvents: () => void;
@@ -47,6 +48,8 @@ interface ChatState {
   loadFiles: () => Promise<void>;
   openFile: (path: string) => Promise<void>;
   pushStream: (line: string) => void;
+  messageSearch: string;
+  setMessageSearch: (q: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -60,6 +63,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamLog: [],
   error: null,
   es: null,
+  messageSearch: "",
+
+  setMessageSearch(q: string) {
+    set({ messageSearch: q });
+  },
 
   async refreshHealth() {
     try {
@@ -109,6 +117,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (get().activeSessionId === id) {
       set({ activeSessionId: null, messages: [] });
     }
+    await get().loadSessions();
+  },
+
+  async renameSession(id: string, title: string) {
+    await api.renameSession(id, title);
     await get().loadSessions();
   },
 

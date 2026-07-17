@@ -149,6 +149,35 @@ sessionsRouter.get("/sessions/:id", requireAuth, async (req, res) => {
   }
 });
 
+sessionsRouter.patch("/sessions/:id", requireAuth, async (req, res) => {
+  try {
+    await requireOpencodeUp();
+    const username = req.session.user!.username;
+    const id = req.params.id;
+    const rec = requireSessionOwner(id, username);
+    const title = String(req.body?.title ?? "").trim();
+    if (!title) {
+      res.status(400).json({ error: "title is required" });
+      return;
+    }
+    const result = await opencodeFetch(`/session/${id}`, {
+      method: "PATCH",
+      directory: rec.workspace,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    if (!result.ok) {
+      res.status(result.status).json({ error: await result.text() });
+      return;
+    }
+    appendAudit("session.rename", username, { sessionId: id, title });
+    res.json(await parseJsonBody(result));
+  } catch (e) {
+    const err = e as Error & { status?: number };
+    res.status(err.status ?? 502).json({ error: err.message });
+  }
+});
+
 sessionsRouter.delete("/sessions/:id", requireAuth, async (req, res) => {
   try {
     await requireOpencodeUp();

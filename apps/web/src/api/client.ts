@@ -88,6 +88,12 @@ export const api = {
       method: "DELETE",
     });
   },
+  renameSession(id: string, title: string) {
+    return request<Record<string, unknown>>(`/api/sessions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    });
+  },
   messages(id: string) {
     return request<unknown[]>(`/api/sessions/${id}/messages`);
   },
