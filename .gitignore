@@ -7,7 +7,13 @@ data/workspaces/*
 data/audit/*
 !data/audit/.gitkeep
 data/session-map.json
+data/quota.json
 opencode.json
 *.log
 .DS_Store
 Thumbs.db
+
+# OpenChamber full clone is large — fetch via scripts/fetch-openchamber.ps1
+vendor/openchamber/
+!vendor/PIN.md
+!vendor/openchamber.sha

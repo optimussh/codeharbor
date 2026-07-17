@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vibecoding Builder — 진행 현황</title>
+  <style>
+    :root {
+      --bg: #0c0d10; --card: #15171c; --border: #2a2e38;
+      --text: #e8eaed; --muted: #9aa0a6; --accent: #7c9cff;
+      --ok: #3dd68c; --warn: #f5a524;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.55;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin: 0 0 0.35rem; }
+    h2 {
+      font-size: 1.15rem; margin: 2rem 0 0.75rem;
+      border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;
+    }
+    .sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+    .badge {
+      display: inline-block; font-size: 0.75rem; padding: 0.15rem 0.55rem;
+      border-radius: 999px; border: 1px solid var(--border); margin-right: 0.35rem;
+    }
+    .badge.ok { color: var(--ok); border-color: #1f6b45; background: #0f2a1c; }
+    .badge.warn { color: var(--warn); border-color: #6b4a10; background: #2a1f0a; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 0.75rem;
+    }
+    .card h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .card .why { color: var(--muted); font-size: 0.9rem; }
+    .card .path {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.78rem; color: var(--accent); margin-top: 0.4rem;
+    }
+    ul, ol { padding-left: 1.2rem; }
+    li { margin: 0.3rem 0; }
+    a { color: var(--accent); }
+    .grid { display: grid; gap: 0.75rem; }
+    @media (min-width: 720px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+    code {
+      background: #0a0b0e; padding: 0.1rem 0.35rem;
+      border-radius: 4px; font-size: 0.85em;
+    }
+    footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; }
+    .phase { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+    .phase span {
+      padding: 0.4rem 0.7rem; border-radius: 8px;
+      background: var(--card); border: 1px solid var(--border); font-size: 0.85rem;
+    }
+    .phase span.done { border-color: #1f6b45; color: var(--ok); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Vibecoding Builder</h1>
+    <p class="sub">
+      로컬 AI 코딩 플랫폼 · OpenCode + OpenChamber 전환 · 멀티유저 · RAG<br />
+      갱신: <strong>2026-07-17</strong> · 원격:
+      <a href="https://github.com/optimussh/vibecodingbuilder" target="_blank" rel="noopener"
+        >github.com/optimussh/vibecodingbuilder</a>
+    </p>
+
+    <h2>지금 어디?</h2>
+    <div class="card">
+      <p>
+        <span class="badge ok">로컬 1.0 플랫폼</span>
+        P0–P3 게이트웨이·격리·쿼터·문서 완료 · OpenChamber UI는 업스트림 기동 시 연결
+      </p>
+      <div class="phase">
+        <span class="done">MVP 채팅·격리·RAG</span>
+        <span class="done">P0 문서·벤더 핀</span>
+        <span class="done">P1 포털·/chamber</span>
+        <span class="done">P2 /opencode 테넌트 프록시</span>
+        <span class="done">P3 쿼터·상태보드</span>
+      </div>
+      <p><strong>로컬 URL</strong></p>
+      <ul>
+        <li>포털: <code>http://127.0.0.1:3000/</code></li>
+        <li>레거시 UI: <code>http://localhost:5173</code></li>
+        <li>OpenChamber 프록시: <code>http://127.0.0.1:3000/chamber</code></li>
+        <li>상태 보드: <code>http://127.0.0.1:3000/docs/status/index.html</code></li>
+        <li>OpenCode 프록시: <code>/opencode/*</code> (로그인 필요, directory 강제)</li>
+      </ul>
+    </div>
+
+    <h2>들어간 기능 (왜 넣었나)</h2>
+    <div class="grid two">
+      <div class="card">
+        <h3><span class="badge ok">완료</span> OpenCode 에이전트 + 레거시 UI</h3>
+        <p class="why"><strong>왜:</strong> 자연어→파일 생성 핵심 루프 검증.</p>
+        <div class="path">apps/server · apps/web</div>
+      </div>
+      <div class="card">
+        <h3><span class="badge ok">완료</span> 3계정 인증·워크스페이스 격리</h3>
+        <p class="why"><strong>왜:</strong> 멀티유저 교차 접근 차단 (directory + session-map).</p>
+        <div class="path">auth · workspace · sessionMap</div>
+      </div>
+      <div class="card">
+        <h3><span class="badge ok">완료</span> RAG (pgvector)</h3>
+        <p class="why"><strong>왜:</strong> 문서 근거 답변 — 스펙 부가가치 2 로컬판.</p>
+        <div class="path">apps/server/src/rag · docker-compose</div>
+      </div>
+      <div class="card">
+        <h3><span class="badge ok">완료</span> 플랫폼 포털 + /chamber</h3>
+        <p class="why"><strong>왜:</strong> 단일 진입점. OpenChamber 연결 전까지 안내 페이지, 연결 후 프록시.</p>
+        <div class="path">routes/portal · routes/proxy</div>
+      </div>
+      <div class="card">
+        <h3><span class="badge ok">완료</span> OpenCode 테넌트 프록시</h3>
+        <p class="why"><strong>왜:</strong> 브라우저 직결 금지·workspace directory 강제·타인 세션 403.</p>
+        <div class="path">GET/POST /opencode/*</div>
+      </div>
+      <div class="card">
+        <h3><span class="badge ok">완료</span> 일일 메시지 쿼터</h3>
+        <p class="why"><strong>왜:</strong> 남용 방지 거버넌스 미니 (기본 200/일).</p>
+        <div class="path">quota.ts · GET /api/quota</div>
+      </div>
+      <div class="card">
+        <h3><span class="badge warn">조건부</span> OpenChamber 풀 UI</h3>
+        <p class="why">
+          <strong>왜:</strong> IDE급 diff/터미널 UX.
+          <strong>제약:</strong> Windows에서 sharp 네이티브 빌드(VS C++) 필요 — WSL 또는 Build Tools 권장.
+          핀: <code>vendor/openchamber.sha</code>
+        </p>
+        <div class="path">vendor/openchamber · scripts/fetch-openchamber.ps1</div>
+      </div>
+    </div>
+
+    <h2>OpenChamber 켜는 법 (선택)</h2>
+    <div class="card">
+      <ol>
+        <li><code>pwsh scripts/fetch-openchamber.ps1</code></li>
+        <li>WSL 권장: <code>cd vendor/openchamber &amp;&amp; bun install &amp;&amp; bun run dev:server</code> (포트 3001)</li>
+        <li><code>.env</code>: <code>OPENCHAMBER_ENABLED=true</code> · <code>OPENCHAMBER_URL=http://127.0.0.1:3001</code></li>
+        <li>게이트웨이 재시작 → 로그인 후 <code>/chamber</code></li>
+      </ol>
+    </div>
+
+    <h2>검증 체크리스트</h2>
+    <div class="card">
+      <ul>
+        <li><code>npm run db:up</code> · <code>npm run dev</code></li>
+        <li>포털 <code>:3000/</code> 열림</li>
+        <li>레거시 <code>:5173</code> user1 로그인 → RAG·채팅</li>
+        <li><code>/opencode/global/health</code> 는 비로그인 시 401</li>
+        <li><code>/chamber</code> 로그인 후 안내 또는 OC UI</li>
+        <li>user2가 user1 세션/문서 접근 불가</li>
+      </ul>
+    </div>
+
+    <h2>앞으로</h2>
+    <div class="card">
+      <ol>
+        <li>WSL에서 OpenChamber 실기동 검증 후 프록시 E2E</li>
+        <li>OC UI에 RAG 탭 플러그인 이식</li>
+        <li>세션/감사를 Postgres 통합</li>
+        <li>(선택) Docker per-user 격리 · 앱 미리보기</li>
+      </ol>
+    </div>
+
+    <h2>히스토리</h2>
+    <div class="card">
+      <ul>
+        <li>2026-07-17 — MVP 0/1/3 · 리사이즈 · P0–P3 게이트웨이·격리·쿼터·상태보드</li>
+      </ul>
+    </div>
+
+    <footer>
+      로그: <code>PROGRESS.md</code> · 스펙: <code>docs/superpowers/specs/</code>
+    </footer>
+  </div>
+</body>
+</html>

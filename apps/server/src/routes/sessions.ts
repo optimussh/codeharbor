@@ -208,6 +208,16 @@ sessionsRouter.post("/sessions/:id/messages", requireAuth, async (req, res) => {
       return;
     }
 
+    const { consumeMessageQuota, getQuota } = await import("../quota.js");
+    if (!consumeMessageQuota(username)) {
+      const q = getQuota(username);
+      res.status(429).json({
+        error: "Daily message quota exceeded",
+        quota: q,
+      });
+      return;
+    }
+
     appendAudit("message.send", username, { sessionId: id });
 
     // Phase 3: inject RAG context (fail-open if RAG down)

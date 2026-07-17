@@ -42,10 +42,30 @@ npm run db:up          # Postgres+pgvector (Docker, port 5433)
 npm run dev
 ```
 
-- Web: http://localhost:5173  
-- BFF: http://127.0.0.1:3000  
-- OpenCode: http://127.0.0.1:4096 (서버가 `OPENCODE_MANAGED=true` 이면 자동 기동 시도)  
-- Postgres RAG: `127.0.0.1:5433` (`vibe` / `vibe` / db `vibe`)
+- **포털:** http://127.0.0.1:3000/  
+- **상태 보드:** http://127.0.0.1:3000/docs/status/index.html  
+- **레거시 UI:** http://localhost:5173  
+- **OpenChamber 프록시:** http://127.0.0.1:3000/chamber (업스트림 설정 시)  
+- **OpenCode 프록시:** `/opencode/*` (로그인 + workspace directory 강제)  
+- OpenCode 직접: `127.0.0.1:4096` (브라우저 직결 비권장)  
+- Postgres RAG: `127.0.0.1:5433`
+
+### OpenChamber (선택, Windows는 WSL 권장)
+
+```powershell
+pwsh scripts/fetch-openchamber.ps1
+# WSL 안에서:
+# cd vendor/openchamber && bun install && bun run dev:server   # :3001
+```
+
+`.env`:
+
+```env
+OPENCHAMBER_ENABLED=true
+OPENCHAMBER_URL=http://127.0.0.1:3001
+```
+
+핀 SHA: `vendor/openchamber.sha` · 노트: `docs/superpowers/specs/2026-07-17-openchamber-spike.md`
 
 ### RAG 사용
 
