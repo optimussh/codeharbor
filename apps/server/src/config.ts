@@ -19,7 +19,7 @@ function resolveWorkspacesRoot(): string {
 
 export const config = {
   projectRoot,
-  port: Number(process.env.PORT ?? 3000),
+  port: Number(process.env.PORT ?? 5300),
   sessionSecret: process.env.SESSION_SECRET ?? "dev-insecure-secret",
   opencodeBaseUrl: process.env.OPENCODE_BASE_URL ?? "http://127.0.0.1:4096",
   opencodeBin: process.env.OPENCODE_BIN ?? "opencode",
@@ -67,7 +67,7 @@ export const config = {
     clientSecret: process.env.OIDC_CLIENT_SECRET ?? "",
     redirectUri:
       process.env.OIDC_REDIRECT_URI ??
-      "http://127.0.0.1:3000/api/auth/oidc/callback",
+      "http://127.0.0.1:5300/api/auth/oidc/callback",
     adminGroup: process.env.OIDC_ADMIN_GROUP ?? "",
     groupsClaim: process.env.OIDC_GROUPS_CLAIM ?? "groups",
   },

@@ -15,8 +15,9 @@
 
 **포함:** 세션 소유권 영속화, OpenCode `directory` 바인딩, 멀티유저 경로 격리, admin 워크스페이스 요약, RAG 미니 (Postgres+pgvector).
 
-브라우저 진입점(권장): **http://127.0.0.1:3000/**  
-레거시 채팅 UI: **http://localhost:5173**
+브라우저 진입점(권장): **http://127.0.0.1:5300/**  
+Admin: **http://127.0.0.1:5300/admin**  
+레거시 채팅 UI: **http://127.0.0.1:5173**
 
 ## 사전 요구
 
@@ -53,16 +54,17 @@ npm run dev:all
 | 서비스 | 포트 | 역할 |
 |--------|------|------|
 | Postgres (pgvector) | 5433 | RAG |
-| Platform gateway | **3000** | 로그인·RAG·테넌트 프록시·포털 |
+| Platform gateway | **5300** | 로그인·RAG·테넌트 프록시·포털·Admin |
 | OpenCode | **4096** | 에이전트 엔진 |
 | OpenChamber | **3001** | IDE UI |
 | Legacy Vite UI | **5173** | 채팅/RAG 패널 |
 
-**권장 진입:** http://127.0.0.1:3000/login?next=/chamber  
+**권장 진입:** http://127.0.0.1:5300/login?next=/chamber  
 
-- 포털/스택: http://127.0.0.1:3000/ · `/api/stack`  
-- 상태 보드: http://127.0.0.1:3000/docs/status/index.html  
-- Chamber 프록시: http://127.0.0.1:3000/chamber  
+- 포털/스택: http://127.0.0.1:5300/ · `/api/stack`  
+- Admin: http://127.0.0.1:5300/admin  
+- 상태 보드: http://127.0.0.1:5300/docs/status/index.html  
+- Chamber 프록시: http://127.0.0.1:5300/chamber  
 - OpenCode 프록시: `/opencode/*` (로그인 + `directory` 강제)  
 
 ### 주요 API (로컬)

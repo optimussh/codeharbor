@@ -32,7 +32,7 @@ portalRouter.get("/", (req, res) => {
 <body>
   <div class="wrap">
     <h1>CodeHarbor</h1>
-    <p class="muted">Governed vibe coding · :3000 게이트웨이 · :4096 OpenCode · :3001 Chamber · :5173 채팅</p>
+    <p class="muted">Governed vibe coding · :5300 게이트웨이 · :4096 OpenCode · :3001 Chamber · :5173 채팅</p>
     ${
       user
         ? `<p>로그인: <strong>${user.username}</strong> (${user.role})

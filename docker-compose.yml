@@ -24,7 +24,7 @@ services:
   #     context: .
   #     dockerfile: deploy/Dockerfile.platform
   #   ports:
-  #     - "3000:3000"
+  #     - "5300:5300"
   #   env_file: .env
   #   environment:
   #     DATABASE_URL: postgres://vibe:vibe@postgres:5432/vibe

@@ -25,7 +25,7 @@ Done.
 Next:
   1. Edit .env (SESSION_SECRET, CREDENTIALS_MASTER_KEY, GEMINI_API_KEY)
   2. npm run dev:all   # or docker compose -f docker-compose.prod.yml up -d --build
-  3. Login http://127.0.0.1:3000/admin as admin
+  3. Login http://127.0.0.1:5300/admin as admin
   4. Put model key in Admin → Credentials
 
 Air-gap notes:

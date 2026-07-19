@@ -15,6 +15,7 @@ import { ProjectPanel } from "../components/ProjectPanel";
 import { SpecPanel } from "../components/SpecPanel";
 import { ResizeHandle } from "../components/ResizeHandle";
 import { usePanelWidths } from "../hooks/usePanelWidths";
+import { GATEWAY_URL } from "../gateway";
 
 export function ChatPage() {
   const user = useAuthStore((s) => s.user);
@@ -101,11 +102,10 @@ export function ChatPage() {
                   const url =
                     b.chamberPath ||
                     b.chamberUrl ||
-                    "http://127.0.0.1:3000/chamber/";
-                  // Same-origin path keeps cookie; absolute URL also ok
+                    `${GATEWAY_URL}/chamber/`;
                   window.open(
                     url.startsWith("/")
-                      ? `http://127.0.0.1:3000${url}`
+                      ? `${GATEWAY_URL}${url}`
                       : url,
                     "_blank",
                     "noopener,noreferrer",
@@ -113,7 +113,7 @@ export function ChatPage() {
                 })
                 .catch(() => {
                   window.open(
-                    "http://127.0.0.1:3000/chamber/",
+                    `${GATEWAY_URL}/chamber/`,
                     "_blank",
                     "noopener,noreferrer",
                   );
@@ -146,7 +146,7 @@ export function ChatPage() {
           </button>
           {user?.role === "admin" && (
             <a
-              href="http://127.0.0.1:3000/admin"
+              href={`${GATEWAY_URL}/admin`}
               target="_blank"
               rel="noreferrer"
               className="text-indigo-400 hover:text-indigo-300"

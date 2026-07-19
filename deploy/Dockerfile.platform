@@ -17,8 +17,8 @@ COPY docs docs
 WORKDIR /app/apps/server
 RUN npx tsc -p tsconfig.json || true
 
-EXPOSE 3000
-ENV PORT=3000
+EXPOSE 5300
+ENV PORT=5300
 ENV OPENCODE_MANAGED=false
 
 CMD ["node", "dist/index.js"]

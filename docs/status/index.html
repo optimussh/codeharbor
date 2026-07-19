@@ -84,8 +84,8 @@
       <p><strong>한 줄 기동</strong> <code>npm run dev:all</code></p>
       <p><strong>로컬 URL · 포트 맵</strong></p>
       <ul>
-        <li>포털 / 스택: <code>http://127.0.0.1:3000/</code> · <code>/api/stack</code></li>
-        <li>로그인 → Chamber: <code>http://127.0.0.1:3000/login?next=/chamber</code></li>
+        <li>포털 / Admin / 스택: <code>http://127.0.0.1:5300/</code> · <code>/admin</code> · <code>/api/stack</code></li>
+        <li>로그인 → Chamber: <code>http://127.0.0.1:5300/login?next=/chamber</code></li>
         <li>OpenChamber 직접: <code>:3001</code> → OpenCode 공유 <code>:4096</code></li>
         <li>레거시 UI: <code>http://localhost:5173</code></li>
         <li>Postgres RAG: <code>:5433</code></li>
@@ -149,7 +149,7 @@
         <li><code>cd vendor/openchamber; bun install --ignore-scripts; bun run build:ui; bun run build:web</code></li>
         <li><code>pwsh scripts/start-openchamber.ps1</code> 또는 <code>bun server/index.js --port 3001</code> (packages/web)</li>
         <li><code>.env</code>: <code>OPENCHAMBER_ENABLED=true</code> · <code>OPENCHAMBER_URL=http://127.0.0.1:3001</code></li>
-        <li><code>npm run dev</code> → <a href="http://127.0.0.1:3000/login?next=/chamber">로그인 후 Chamber</a></li>
+        <li><code>npm run dev</code> → <a href="http://127.0.0.1:5300/login?next=/chamber">로그인 후 Chamber</a></li>
       </ol>
     </div>
 
@@ -157,7 +157,7 @@
     <div class="card">
       <ul>
         <li><code>npm run db:up</code> · <code>npm run dev</code></li>
-        <li>포털 <code>:3000/</code> 열림</li>
+        <li>포털 <code>:5300/</code> 열림</li>
         <li>레거시 <code>:5173</code> user1 로그인 → RAG·채팅</li>
         <li><code>/opencode/global/health</code> 는 비로그인 시 401</li>
         <li><code>/chamber</code> 로그인 후 안내 또는 OC UI</li>
@@ -210,7 +210,7 @@
       <div class="card">
         <h3><span class="badge ok">완료</span> Chamber 서브패스</h3>
         <p class="why"><strong>왜:</strong> 같은 게이트웨이 origin에서 IDE 호스팅.</p>
-        <div class="path">http://127.0.0.1:3000/chamber/</div>
+        <div class="path">http://127.0.0.1:5300/chamber/</div>
       </div>
       <div class="card">
         <h3><span class="badge ok">완료</span> Chamber 워크스페이스 자동 오픈</h3>

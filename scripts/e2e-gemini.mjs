@@ -45,7 +45,7 @@ function loadDotEnv() {
 const dotenv = loadDotEnv();
 const key =
   process.env.GEMINI_API_KEY?.trim() || dotenv.GEMINI_API_KEY?.trim() || "";
-const port = process.env.PORT || dotenv.PORT || "3000";
+const port = process.env.PORT || dotenv.PORT || "5300";
 const base = `http://127.0.0.1:${port}`;
 
 const report = {

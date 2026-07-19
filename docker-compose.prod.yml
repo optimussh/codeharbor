@@ -26,7 +26,7 @@ services:
       dockerfile: deploy/Dockerfile.platform
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-5300}:5300"
     env_file:
       - .env
     environment:

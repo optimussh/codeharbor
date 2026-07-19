@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useChatStore } from "../stores/chatStore";
+import { GATEWAY_URL } from "../gateway";
 
 type Project = {
   id: string;
@@ -96,7 +97,7 @@ export function ProjectPanel() {
           onClick={() => {
             void api.projectBind(projectId).then((b) => {
               const url = b.chamberPath?.startsWith("/")
-                ? `http://127.0.0.1:3000${b.chamberPath}`
+                ? `${GATEWAY_URL}${b.chamberPath}`
                 : b.chamberUrl;
               window.open(url, "_blank", "noopener,noreferrer");
             });

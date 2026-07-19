@@ -23,7 +23,7 @@ Multi-user **control plane** for AI coding agents on customer infrastructure:
 [Developer browser]
         │ HTTPS / cookie session
         ▼
-[CodeHarbor Gateway :3000]
+[CodeHarbor Gateway :5300]
   ├─ Auth (local or OIDC)
   ├─ RBAC / project ACL
   ├─ Credential vault (AES-GCM)
