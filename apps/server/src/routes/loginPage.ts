@@ -44,9 +44,11 @@ loginPageRouter.get("/login", (req, res) => {
     <input name="password" id="p" type="password" value="user1" autocomplete="current-password" required />
     <button type="submit">Login</button>
     <div class="err" id="e">${err ? "로그인 실패" : ""}</div>
+    <p class="hint" style="margin-top:.75rem"><a href="/api/auth/oidc/login?next=${encodeURIComponent(next)}">Login with SSO (OIDC)</a>
+      <span style="opacity:.7"> — OIDC_ENABLED=true 일 때</span></p>
     <p class="hint">admin/admin123 · user1/user1 · user2/user2</p>
     <p class="hint">채팅 UI: <a href="http://127.0.0.1:5173/">http://127.0.0.1:5173/</a><br/>
-    OpenChamber: <a href="http://127.0.0.1:3001/">http://127.0.0.1:3001/</a></p>
+    Admin: <a href="/admin">/admin</a> · Chamber: <a href="/chamber/">/chamber/</a></p>
   </form>
   <script>
     const next = ${JSON.stringify(next)};

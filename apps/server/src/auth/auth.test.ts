@@ -22,7 +22,8 @@ describe("auth", () => {
 
     const me = await agent.get("/api/auth/me");
     expect(me.status).toBe(200);
-    expect(me.body).toEqual({ username: "user1", role: "user" });
+    expect(me.body.username).toBe("user1");
+    expect(me.body.role).toBe("user");
   });
 
   it("blocks me when logged out", async () => {

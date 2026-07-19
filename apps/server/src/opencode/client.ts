@@ -36,10 +36,11 @@ export function llmStatus(): "configured" | "missing" {
 
 export async function getHealth(): Promise<HealthStatus> {
   const { checkRagDb } = await import("../rag/db.js");
+  const { resolveGeminiKey } = await import("../credentials/vault.js");
   return {
     server: "ok",
     opencode: await checkOpencodeHealth(),
-    llm: llmStatus(),
+    llm: resolveGeminiKey() ? "configured" : "missing",
     rag: await checkRagDb(),
   };
 }

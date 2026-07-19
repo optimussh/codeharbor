@@ -253,15 +253,15 @@
       </div>
     </div>
 
-    <h2>앞으로 (구현 우선)</h2>
+    <h2>P1 구현 상태</h2>
     <div class="card">
-      <ol>
-        <li>P1.2 Admin + credential vault 구현</li>
-        <li>P1.1 SSO OIDC</li>
-        <li>P1.3 Project ACL → P1.4 Sandbox → P1.5/6 Audit·Usage</li>
-        <li>.env GEMINI_API_KEY · <code>npm run e2e:gemini:live</code></li>
-        <li>로컬 폴더 완전 rename (IDE 종료 후 <code>scripts/rename-folder-to-codeharbor.ps1</code>)</li>
-      </ol>
+      <p><span class="badge ok">코드 완료</span> Admin/Vault · Projects · Sandbox API · Audit/Usage · Templates · Specs · Steering · OIDC 라우트</p>
+      <ul>
+        <li>Admin: <code>http://127.0.0.1:3000/admin</code> (admin 로그인)</li>
+        <li>API: <code>/api/projects</code> · <code>/api/sandbox/*</code> · <code>/api/templates</code> · <code>/api/specs</code> · <code>/api/steering</code></li>
+        <li>OIDC: <code>OIDC_ENABLED=true</code> + issuer/client 설정</li>
+        <li>남은 심화: 샌드박스 내 에이전트 완전 격리, 사내 RAG corp, GitHub App, Air-gap 패키징</li>
+      </ul>
     </div>
 
     <h2>히스토리</h2>

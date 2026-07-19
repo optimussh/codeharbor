@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { resolveGeminiKey } from "../credentials/vault.js";
 
 /** Deterministic local embedding (no API) — cosine-usable for demo/tests */
 export function localEmbed(text: string, dims = config.embeddingDims): number[] {
@@ -22,7 +23,7 @@ export async function embedText(text: string): Promise<{
   vector: number[];
   provider: "gemini" | "local";
 }> {
-  const key = config.geminiApiKey.trim();
+  const key = resolveGeminiKey();
   if (!key) {
     return { vector: localEmbed(text), provider: "local" };
   }

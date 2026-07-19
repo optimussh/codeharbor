@@ -43,14 +43,21 @@ portalRouter.get("/", (req, res) => {
     <div id="stack">스택 로딩…</div>
 
     <a class="card" href="http://127.0.0.1:5173/"><strong>1. 채팅 UI</strong><br/>
-      <span class="muted">세션 · 메시지 · RAG · 파일 트리 — 가장 확실한 채팅</span></a>
+      <span class="muted">세션 · 메시지 · RAG · 파일 트리</span></a>
     <button class="card" type="button" id="btnChamber"><strong>2. OpenChamber IDE (자동 오픈)</strong><br/>
-      <span class="muted">bind → /chamber/?directory=…&amp;sessionId=… · 워크스페이스 자동 오픈</span></button>
+      <span class="muted">bind → /chamber/?directory=…&amp;sessionId=…</span></button>
     <button class="card" type="button" id="btnPreview"><strong>3. 앱 미리보기 시작</strong><br/>
-      <span class="muted">워크스페이스에서 dev 서버 스폰 → /preview/app/</span></button>
+      <span class="muted">워크스페이스 dev 서버 → /preview/app/</span></button>
     <div id="preview">preview: idle</div>
+    ${
+      user?.role === "admin"
+        ? `<a class="card" href="/admin"><strong>4. Admin 콘솔</strong><br/>
+      <span class="muted">유저 · 키 vault · 감사 · 사용량</span></a>`
+        : ""
+    }
     <a class="card" href="/docs/status/index.html"><strong>진행 현황 보드</strong></a>
     <a class="card" href="/api/stack"><strong>Stack JSON</strong></a>
+    <p class="muted">API: projects · templates · specs · steering · sandbox · /api/usage/me</p>
     <p class="muted">기동: <code>npm run dev:all</code></p>
   </div>
   <script>

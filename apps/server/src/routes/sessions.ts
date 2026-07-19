@@ -296,7 +296,7 @@ sessionsRouter.post(
         ragHits = hits.length;
         const ctx = formatRagContext(hits);
         if (ctx) {
-          promptText = `${ctx}?�용??질문:\n${text}`;
+          promptText = `${ctx}User question:\n${text}`;
           appendAudit("rag.inject", username, {
             sessionId: id,
             hitCount: ragHits,
@@ -307,12 +307,26 @@ sessionsRouter.post(
       }
     }
 
-    const model = config.geminiApiKey
+    const { resolveGeminiKey } = await import("../credentials/vault.js");
+    const { recordUsage, estimateTokensFromText } = await import(
+      "../usage.js"
+    );
+    const hasLlm = Boolean(resolveGeminiKey());
+    const model = hasLlm
       ? {
           providerID: config.opencodeProviderId,
           modelID: config.opencodeModelId,
         }
       : undefined;
+
+    recordUsage({
+      username,
+      sessionId: id,
+      kind: "message",
+      model: config.opencodeModelId,
+      inputTokens: estimateTokensFromText(promptText),
+      meta: { ragHits },
+    });
 
     const promptBody = {
       parts: [{ type: "text", text: promptText }],

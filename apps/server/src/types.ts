@@ -7,6 +7,8 @@ export interface AuthUser {
 
 export interface SeedUser extends AuthUser {
   passwordHash: string;
+  disabled?: boolean;
+  dailyQuota?: number | null;
 }
 
 export interface HealthStatus {

@@ -32,6 +32,16 @@
 - **Why:** 구현·파일럿 착수 가능 상태
 - **Status:** done
 
+### P1 + 해자 시드 구현 (Admin/Vault/Projects/Sandbox/Audit/Usage/Templates/Specs/Steering/OIDC)
+
+- **What:**
+  - Admin UI `/admin` · credential vault · audit/usage export
+  - Projects + ACL + bind · Docker sandbox API
+  - Templates apply · Spec-lite · Steering docs · OIDC 라우트
+  - message 경로 usage meter · Gemini key vault resolve
+- **Why:** 파일럿 거버넌스 + 데이터/정책 해자 시드
+- **Status:** done (코드)
+
 ---
 
 ## 2026-07-17

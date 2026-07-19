@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.js";
+import { findUser } from "./users.js";
 
 interface DayBucket {
   day: string;
@@ -33,12 +34,20 @@ function save(bucket: DayBucket): void {
   fs.writeFileSync(quotaFile(), JSON.stringify(bucket, null, 2), "utf8");
 }
 
+function limitFor(username: string): number {
+  const u = findUser(username);
+  if (u?.dailyQuota != null && Number.isFinite(u.dailyQuota)) {
+    return Number(u.dailyQuota);
+  }
+  return config.dailyMessageQuota;
+}
+
 export function getQuota(username: string): {
   limit: number;
   used: number;
   remaining: number | null;
 } {
-  const limit = config.dailyMessageQuota;
+  const limit = limitFor(username);
   const bucket = load();
   const used = bucket.counts[username] ?? 0;
   return {
@@ -50,7 +59,7 @@ export function getQuota(username: string): {
 
 /** Returns false if over quota */
 export function consumeMessageQuota(username: string): boolean {
-  const limit = config.dailyMessageQuota;
+  const limit = limitFor(username);
   if (limit <= 0) return true;
   const bucket = load();
   const used = bucket.counts[username] ?? 0;
